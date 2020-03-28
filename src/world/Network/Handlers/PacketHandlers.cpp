@@ -196,7 +196,7 @@ void Sapphire::Network::GameConnection::updatePositionHandler( const Packets::FF
   player.setPos( updatePositionPacket.data().position );
 
   if( ( player.getCurrentAction() != nullptr ) && bPosChanged )
-    player.getCurrentAction()->setInterrupted( Common::ActionInterruptType::RegularInterrupt );
+    player.getCurrentAction()->interrupt();
 
   // if no one is in range, don't bother trying to send a position update
   if( !player.hasInRangeActor() )
@@ -411,6 +411,9 @@ void Sapphire::Network::GameConnection::finishLoadingHandler( const Packets::FFX
 
   // spawn the player for himself
   player.spawn( player.getAsPlayer() );
+
+  player.gaugeClear();
+  player.sendActorGauge();
 
   // notify the zone of a change in position to force an "inRangeActor" update
   player.getCurrentTerritory()->updateActorPosition( player );

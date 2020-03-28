@@ -77,11 +77,19 @@ namespace Sapphire::ScriptAPI
   {
   }
 
+  void ActionScript::onBeforePreCheck( Sapphire::World::Action::Action& action )
+  {
+  }
+
   void ActionScript::onStart( Sapphire::World::Action::Action& action )
   {
   }
 
   void ActionScript::onExecute( Sapphire::World::Action::Action& action )
+  {
+  }
+
+  void ActionScript::onAfterBuildEffect( Sapphire::World::Action::Action& action )
   {
   }
 

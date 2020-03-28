@@ -61,9 +61,11 @@ namespace Sapphire::Network::Packets::Server
 
       memcpy( m_data.orchestrionMask, player.getOrchestrionBitmask(), sizeof( m_data.orchestrionMask ) );
 
-      memcpy( m_data.mountGuideMask, player.getMountGuideBitmask(), sizeof( m_data.mountGuideMask ) );
+      //memcpy( m_data.mountGuideMask, player.getMountGuideBitmask(), sizeof( m_data.mountGuideMask ) );
+      memset( m_data.mountGuideMask, 255, sizeof( m_data.mountGuideMask ) );
 
-      memcpy( m_data.unlockBitmask, player.getUnlockBitmask(), sizeof( m_data.unlockBitmask ) );
+      //memcpy( m_data.unlockBitmask, player.getUnlockBitmask(), sizeof( m_data.unlockBitmask ) );
+      memset( m_data.unlockBitmask, 255, sizeof( m_data.unlockBitmask ) );
 
       memcpy( m_data.discovery, player.getDiscoveryBitmask(), sizeof( m_data.discovery ) );
 
@@ -78,11 +80,11 @@ namespace Sapphire::Network::Packets::Server
   //      m_data.unknown70[4] = 1; // enable df
 
       // enable all raids/guildhests/dungeons
-      memset( m_data.unlockedDungeons, 0xFF, sizeof( m_data.unlockedDungeons ) );
-      memset( m_data.unlockedGuildhests, 0xFF, sizeof( m_data.unlockedGuildhests ) );
-      memset( m_data.unlockedPvp, 0xFF, sizeof( m_data.unlockedPvp ) );
-      memset( m_data.unlockedRaids, 0xFF, sizeof( m_data.unlockedRaids ) );
-      memset( m_data.unlockedTrials, 0xFF, sizeof( m_data.unlockedTrials ) );
+      //memset( m_data.unlockedDungeons, 0xFF, sizeof( m_data.unlockedDungeons ) );
+      //memset( m_data.unlockedGuildhests, 0xFF, sizeof( m_data.unlockedGuildhests ) );
+      //memset( m_data.unlockedPvp, 0xFF, sizeof( m_data.unlockedPvp ) );
+      //memset( m_data.unlockedRaids, 0xFF, sizeof( m_data.unlockedRaids ) );
+      //memset( m_data.unlockedTrials, 0xFF, sizeof( m_data.unlockedTrials ) );
     };
   };
 

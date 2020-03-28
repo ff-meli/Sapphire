@@ -3,6 +3,8 @@
 
 #include "Forwards.h"
 
+#include "Action/ActionLut.h"
+
 namespace Sapphire {
 namespace StatusEffect {
 
@@ -16,6 +18,10 @@ public:
   ~StatusEffect();
 
   void onTick();
+
+  void onBeforeActionStart( World::Action::Action* action );
+
+  bool onActionHitTarget( World::Action::Action* action, Entity::CharaPtr victim, int victimCounter );
 
   void applyStatus();
 
@@ -47,6 +53,17 @@ public:
 
   const std::string& getName() const;
 
+  const Sapphire::World::Action::StatusEffectEntry& getEffectEntry() const;
+
+  void replaceEffectEntry( Sapphire::World::Action::StatusEffectEntry entryOverride );
+
+  bool isMarkedToRemove();
+
+  void markToRemove();
+
+  void refresh();
+  void refresh( Sapphire::World::Action::StatusEffectEntry newEntry );
+
 private:
   uint32_t m_id;
   Entity::CharaPtr m_sourceActor;
@@ -58,7 +75,11 @@ private:
   uint16_t m_param;
   std::string m_name;
   std::pair< uint8_t, uint32_t > m_currTickEffect;
-
+  Sapphire::World::Action::StatusEffectEntry m_effectEntry;
+  uint32_t m_value;
+  float m_cachedSourceCrit;
+  float m_cachedSourceCritBonus;
+  bool m_markToRemove;
 };
 
 }

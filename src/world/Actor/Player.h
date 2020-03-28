@@ -974,6 +974,33 @@ namespace Sapphire::Entity
 
     Sapphire::ItemPtr dropInventoryItem( Common::InventoryType type, uint16_t slotId );
 
+    // Job UI
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    void gaugeClear();
+    void sendActorGauge();
+    void gaugeSetRaw( uint8_t* pData );
+
+    void gaugeWarSetIb( uint8_t value );
+    uint8_t gaugeWarGetIb();
+
+    void gaugePldSetOath( uint8_t value );
+    uint8_t gaugePldGetOath();
+
+    uint8_t gaugeWhmGetLily();
+    uint8_t gaugeWhmGetBloodLily();
+    void gaugeWhmSetLilies( uint8_t liles, uint8_t bloodLilies );
+    void gaugeWhmSetLilyTimer( uint16_t value, bool sendPacket = false );
+    uint16_t gaugeWhmGetLilyTimer();
+
+    void gaugeDrkSetBlood( uint8_t value );
+    uint8_t gaugeDrkGetBlood();
+    void gaugeDrkSetDarkArts( bool value );
+    bool gaugeDrkGetDarkArts();
+    void gaugeDrkSetDarkSideTimer( uint16_t value, bool sendPacket = false );
+    uint16_t gaugeDrkGetDarkSideTimer();
+    void gaugeDrkSetShadowTimer( uint16_t value, bool sendPacket = false );
+    uint16_t gaugeDrkGetShadowTimer();
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////
 
     Common::HuntingLogEntry& getHuntingLogEntry( uint8_t index );
@@ -1085,6 +1112,8 @@ namespace Sapphire::Entity
     bool m_bInCombat;
     bool m_bLoadingComplete;
     bool m_bAutoattack;
+
+    Common::JobGauge m_gauge;
 
     Common::ZoneingType m_zoningType;
     uint32_t m_territoryId;

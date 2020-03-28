@@ -583,10 +583,12 @@ namespace Sapphire::Common
     TacticsPoints = 5,
     StatusEffect = 10,
     WARGauge = 22,
-//    DRKGauge = 25,
+    DRKGauge = 25,
 //    AetherflowStack = 30,
 //    Status = 32,
     PLDGauge = 41,
+    WHMBloodLily = 56,
+    WHMLily = 57,
 //    RDMGaugeBoth = 74,
 ////  RDMGaugeBlack = 75, // not right?
 //    DRGGauge3Eyes = 76,
@@ -597,10 +599,10 @@ namespace Sapphire::Common
     //WeaponOverride = -1, // Needs more investigation (takes the damage type of the equipped weapon)?
     Physical = -1, // seems to be the case
     Unknown_0 = 0,
-    Slashing = 1,
-    Piercing = 2,
-    Blunt = 3,
-    Unknown_4 = 4,
+    Slashing = 1, // likely not used post 5.0
+    Piercing = 2, // likely not used post 5.0
+    Blunt = 3, // likely not used post 5.0
+    Unknown_4 = 4, // likely not used post 5.0
     Magical = 5,
     Darkness = 6,
     Unknown_7 = 7,
@@ -1025,6 +1027,261 @@ namespace Sapphire::Common
     Melee,
     Crafter,
     Gatherer
+  };
+
+  enum class StatusEffectType : uint32_t
+  {
+    Invalid = 0,
+    DamageMultiplier = 1,
+    DamageReceiveMultiplier = 2,
+    Hot = 3,
+    Dot = 4,
+    HealReceiveMultiplier = 5,
+    HealCastMultiplier = 6,
+    CritDHRateBonus = 7,
+    DamageReceiveTrigger = 8,
+    DamageDealtTrigger = 9,
+    Shield = 10,
+    MPRestore = 11,
+    Haste = 12,
+    InstantCast = 13,
+    BlockParryRateBonus = 14,
+    MPRestorePerGCD = 15,
+  };
+
+  enum class ActionTypeFilter : int32_t
+  {
+    Unknown = 0,
+    Physical = 1,
+    Magical = 2,
+    All = 255,
+  };
+
+  enum class CritDHBonusFilter : int32_t
+  {
+    None = 0,
+    Damage = 1,
+    Heal = 2,
+    All = 255,
+  };
+
+  enum class StatusEffectTriggerResult : int32_t
+  {
+    ReflectDamage = 1,
+    AbsorbHP = 2,
+  };
+
+  enum ActionBonusEffect : uint8_t
+  {
+    NoBonus = 0,
+    CritBonus = 1,
+    DHBonus = 2,
+    GainMPPercentage = 4,
+    GainJobResource = 8,
+    SelfHeal = 16,
+    DamageFallOff = 32,
+    GainJobTimer = 64,
+  };
+
+  enum ActionBonusEffectRequirement : uint8_t
+  {
+    NoRequirement = 0,
+    RequireCorrectCombo = 1,
+    RequireCorrectPositional = 2,
+  };
+
+  enum class AstCardType : uint8_t
+  {
+    None = 0,
+    Balance = 1,
+    Bole = 2,
+    Arrow = 3,
+    Spear = 4,
+    Ewer = 5,
+    Spire = 6,
+    Lord = 0x70,
+    Lady = 0x80,
+  };
+
+  enum class AstSealType : uint8_t
+  {
+    None = 0,
+    Sun = 1,
+    Moon = 2,
+    Celestrial = 3,
+  };
+
+  enum class DrgState : uint8_t
+  {
+    None = 0,
+    BloodOfTheDragon = 1,
+    LifeOfTheDragon = 2,
+  };
+
+  enum class SamSen : uint8_t
+  {
+    None = 0,
+    Setsu = 1,
+    Getsu = 2,
+    Ka = 4,
+  };
+
+  enum class SchDismissedFairy : uint8_t
+  {
+    None = 0,
+    Eos = 6,
+    Selene = 7,
+  };
+
+  enum class SmnPet : uint8_t
+  {
+    None = 0,
+    Ifrit = 3,
+    Titan = 4,
+    Garuda = 5,
+  };
+
+  enum class SmnPetGlam : uint8_t
+  {
+    None = 0,
+    Emerald = 1,
+    Topaz = 2,
+    Ruby = 3,
+  };
+
+  enum class BrdSong : uint8_t
+  {
+    Mage = 5,
+    Army = 0x0A,
+    Wanderer = 0x0F,
+  };
+
+  union JobGauge
+  {
+    struct
+    {
+      uint8_t gauge_data[15];
+    } _raw;
+
+    struct
+    {
+      uint32_t unused;
+      AstCardType card;
+      AstSealType seals[3];
+    } ast;
+    struct
+    {
+      uint16_t timeUntilNextPolyglot;
+      uint16_t elementTimer;
+      uint8_t elementStance;
+      uint8_t umbralhearts;
+      uint8_t polyglotStacks;
+      uint8_t enochainState;
+    } blm;
+    struct
+    {
+      uint16_t songTimer;
+      uint8_t songStacks;
+      uint8_t unused;
+      BrdSong song;
+    } brd;
+    struct
+    {
+      uint8_t feathers;
+      uint8_t esprit;
+      uint8_t stepOrder[4];
+      uint8_t completeSteps;
+    } dnc;
+    struct
+    {
+      uint16_t dragonTimer;
+      DrgState dragonState;
+      uint8_t eyes;
+    } drg;
+    struct
+    {
+      uint8_t blood;
+      uint8_t unused;
+      uint16_t darksideTimer;
+      uint8_t darkArts;
+      uint8_t unused2;
+      uint16_t shadowTimer;
+    } drk;
+    struct
+    {
+      uint8_t ammo;
+      uint8_t unused;
+      uint16_t maxTimerDuration; // what is this?
+      uint8_t ammoComboStep;
+    } gnb;
+    struct
+    {
+      uint16_t overheatTimer;
+      uint16_t robotTimer;
+      uint8_t heat;
+      uint8_t battery;
+      uint8_t lastRobotBatteryPower;
+      uint8_t activeTimerFlag;
+    } mch;
+    struct
+    {
+      uint8_t greasedLightningTimer;
+      uint8_t unused;
+      uint8_t greasedLightningStacks;
+      uint8_t chakra;
+      uint8_t greasedLightningTimerFreezed;
+    } mnk;
+    struct
+    {
+      uint32_t hutonTimer;
+      uint8_t tenChiJinMudrasUsed;
+      uint8_t ninki;
+      uint8_t hutonManualCasts;
+    } nin;
+    struct
+    {
+      uint8_t oathGauge;
+    } pld;
+    struct
+    {
+      uint8_t whiteGauge;
+      uint8_t blackGauge;
+    } rdm;
+    struct
+    {
+      uint16_t unused;
+      uint8_t unused2;
+      uint8_t kenki;
+      uint8_t meditationStacks;
+      SamSen senFlag;
+    } sam;
+    struct
+    {
+      uint16_t unused;
+      uint8_t aetherflowStacks;
+      uint8_t fairyGauge;
+      uint16_t seraphTimer;
+      SchDismissedFairy dismissedFairy;
+    } sch;
+    struct
+    {
+      uint16_t timer;
+      SmnPet returnSummon;
+      SmnPetGlam petGlam;
+      uint8_t stacks;
+    } smn;
+
+    struct
+    {
+      uint8_t beastGauge;
+    } war;
+    struct
+    {
+      uint16_t unused;
+      uint16_t lilyTimer;
+      uint8_t lilies;
+      uint8_t bloodLilies;
+    } whm;
   };
 
   using PlayerStateFlagList = std::vector< PlayerStateFlag >;

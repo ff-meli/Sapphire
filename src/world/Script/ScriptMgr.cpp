@@ -328,6 +328,18 @@ bool Sapphire::Scripting::ScriptMgr::onEObjHit( Sapphire::Entity::Player& player
   return didCallScript;
 }
 
+bool Sapphire::Scripting::ScriptMgr::onBeforePreCheck( World::Action::Action& action )
+{
+  auto script = m_nativeScriptMgr->getScript< Sapphire::ScriptAPI::ActionScript >( action.getId() );
+
+  if( script )
+  {
+    script->onBeforePreCheck( action );
+    return true;
+  }
+  return false;
+}
+
 bool Sapphire::Scripting::ScriptMgr::onExecute( World::Action::Action& action )
 {
   auto script = m_nativeScriptMgr->getScript< Sapphire::ScriptAPI::ActionScript >( action.getId() );
@@ -335,6 +347,18 @@ bool Sapphire::Scripting::ScriptMgr::onExecute( World::Action::Action& action )
   if( script )
   {
     script->onExecute( action );
+    return true;
+  }
+  return false;
+}
+
+bool Sapphire::Scripting::ScriptMgr::onAfterBuildEffect( World::Action::Action& action )
+{
+  auto script = m_nativeScriptMgr->getScript< Sapphire::ScriptAPI::ActionScript >( action.getId() );
+
+  if( script )
+  {
+    script->onAfterBuildEffect( action );
     return true;
   }
   return false;

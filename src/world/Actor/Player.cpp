@@ -106,6 +106,8 @@ Sapphire::Entity::Player::Player() :
 
   m_objSpawnIndexAllocator.init( MAX_DISPLAYED_EOBJS );
   m_actorSpawnIndexAllocator.init( MAX_DISPLAYED_ACTORS, true );
+
+  gaugeClear();
 }
 
 Sapphire::Entity::Player::~Player()
@@ -278,6 +280,7 @@ void Sapphire::Entity::Player::calculateStats()
   m_baseStats.pie = static_cast< uint32_t >( base );
   m_baseStats.skillSpeed = paramGrowthInfo->baseSpeed;
   m_baseStats.spellSpeed = paramGrowthInfo->baseSpeed;
+  m_baseStats.haste = 100;
   m_baseStats.accuracy = paramGrowthInfo->baseSpeed;
   m_baseStats.critHitRate = paramGrowthInfo->baseSpeed;
   m_baseStats.attackPotMagic = paramGrowthInfo->baseSpeed;
@@ -330,7 +333,7 @@ void Sapphire::Entity::Player::sendStats()
   statPacket->data().healingMagicPotency = getStatValue( Common::BaseParam::HealingMagicPotency );
   statPacket->data().skillSpeed = getStatValue( Common::BaseParam::SkillSpeed );
   statPacket->data().spellSpeed = getStatValue( Common::BaseParam::SpellSpeed );
-  statPacket->data().haste = 100;
+  statPacket->data().haste = getStatValue( Common::BaseParam::Haste );
   statPacket->data().criticalHit = getStatValue( Common::BaseParam::CriticalHit );
   statPacket->data().defense = getStatValue( Common::BaseParam::Defense );
   statPacket->data().magicDefense = getStatValue( Common::BaseParam::MagicDefense );
@@ -771,15 +774,7 @@ void Sapphire::Entity::Player::gainLevel()
   m_hp = getMaxHp();
   m_mp = getMaxMp();
 
-  auto effectListPacket = makeZonePacket< FFXIVIpcStatusEffectList >( getId() );
-  effectListPacket->data().classId = static_cast< uint8_t > ( getClass() );
-  effectListPacket->data().level1 = getLevel();
-  effectListPacket->data().level = getLevel();
-  effectListPacket->data().current_hp = getMaxHp();
-  effectListPacket->data().current_mp = getMaxMp();
-  effectListPacket->data().max_hp = getMaxHp();
-  effectListPacket->data().max_mp = getMaxMp();
-  sendToInRangeSet( effectListPacket, true );
+  sendStatusEffectUpdate();
 
   sendToInRangeSet( makeActorControl( getId(), LevelUpEffect, static_cast< uint8_t >( getClass() ),
                                       getLevel(), getLevel() - 1 ), true );
@@ -866,6 +861,9 @@ void Sapphire::Entity::Player::setClassJob( Common::ClassJob classJob )
   sendToInRangeSet( makeActorControl( getId(), ClassJobChange, 0x04 ), true );
 
   sendStatusUpdate();
+
+  gaugeClear();
+  sendActorGauge();
 }
 
 void Sapphire::Entity::Player::setLevel( uint8_t level )
@@ -1126,6 +1124,7 @@ void Sapphire::Entity::Player::update( uint64_t tickCount )
   if( !isAlive() )
     return;
 
+  int64_t interval = tickCount - m_lastUpdate;
   m_lastUpdate = tickCount;
 
   if( !checkAction() )
@@ -1155,7 +1154,7 @@ void Sapphire::Entity::Player::update( uint64_t tickCount )
                               actor->getPos().x, actor->getPos().y, actor->getPos().z ) <= range )
           {
 
-            if( ( tickCount - m_lastAttack ) > mainWeap->getDelay() )
+            if( ( tickCount - m_lastAttack ) > ( static_cast< float >( mainWeap->getDelay() ) * ( getStatValue( Common::BaseParam::Haste ) / 100.0f ) ) )
             {
               m_lastAttack = tickCount;
               autoAttack( actor->getAsChara() );
@@ -1164,6 +1163,53 @@ void Sapphire::Entity::Player::update( uint64_t tickCount )
           }
         }
       }
+    }
+  }
+
+  switch( getClass() )
+  {
+    case Common::ClassJob::Conjurer:
+    case Common::ClassJob::Whitemage:
+    {
+      if( hasStateFlag( Common::PlayerStateFlag::InCombat ) )
+      {
+        if( gaugeWhmGetLily() < 3 )
+        {
+          auto lilyTimer = gaugeWhmGetLilyTimer();
+          lilyTimer += interval;
+          if( lilyTimer >= 30000 )
+          {
+            gaugeWhmSetLilyTimer( 0 ); // packet is sent together with following lily update
+            gaugeWhmSetLilies( gaugeWhmGetLily() + 1, gaugeWhmGetBloodLily() );
+          }
+          else
+          {
+            gaugeWhmSetLilyTimer( lilyTimer ); // don't send any packet, the client increases the timer by itself
+          }
+        }
+        else
+        {
+          gaugeWhmSetLilyTimer( 0 );
+        }
+      }
+      break;
+    }
+    case Common::ClassJob::Darkknight:
+    {
+      auto dsTimer = gaugeDrkGetDarkSideTimer();
+      if( dsTimer > interval )
+        dsTimer -= interval;
+      else
+        dsTimer = 0;
+      gaugeDrkSetDarkSideTimer( dsTimer );
+
+      auto shadowTimer = gaugeDrkGetShadowTimer();
+      if( shadowTimer > interval )
+        shadowTimer -= interval;
+      else
+        shadowTimer = 0;
+      gaugeDrkSetShadowTimer( shadowTimer );
+      break;
     }
   }
 
@@ -1466,13 +1512,17 @@ void Sapphire::Entity::Player::onMobAggro( BNpcPtr pBNpc )
 {
   hateListAdd( pBNpc );
   queuePacket( makeActorControl( getId(), ToggleAggro, 1 ) );
+  setStateFlag( Common::PlayerStateFlag::InCombat );
 }
 
 void Sapphire::Entity::Player::onMobDeaggro( BNpcPtr pBNpc )
 {
   hateListRemove( pBNpc );
   if( m_actorIdTohateSlotMap.empty() )
+  {
     queuePacket( makeActorControl( getId(), ToggleAggro ) );
+    unsetStateFlag( Common::PlayerStateFlag::InCombat );
+  }
 }
 
 bool Sapphire::Entity::Player::isLogin() const
@@ -1590,52 +1640,31 @@ uint32_t Sapphire::Entity::Player::getPersistentEmote() const
 
 void Sapphire::Entity::Player::autoAttack( CharaPtr pTarget )
 {
-
-  auto mainWeap = getItemAt( Common::GearSet0, Common::GearSetSlot::MainHand );
-
   pTarget->onActionHostile( getAsChara() );
-  //uint64_t tick = Util::getTimeMs();
-  //srand(static_cast< uint32_t >(tick));
-
-  auto& RNGMgr = Common::Service< World::Manager::RNGMgr >::ref();
-  auto variation = static_cast< uint32_t >( RNGMgr.getRandGenerator< float >( 0, 3 ).next() );
-
-  auto damage = Math::CalcStats::calcAutoAttackDamage( *this );
-
+  auto& exdData = Common::Service< Data::ExdDataGenerated >::ref();
+  assert( exdData );
+  World::Action::ActionPtr action;
   if( getClass() == ClassJob::Machinist || getClass() == ClassJob::Bard || getClass() == ClassJob::Archer )
   {
-    auto effectPacket = std::make_shared< Server::EffectPacket >( getId(), pTarget->getId(), 8 );
-    effectPacket->setRotation( Util::floatToUInt16Rot( getRot() ) );
-
-    Common::EffectEntry entry{};
-    entry.value = damage.first;
-    entry.effectType = Common::ActionEffectType::Damage;
-    entry.param0 = static_cast< uint8_t >( damage.second );
-    entry.param2 = 0x72;
-
-    effectPacket->addEffect( entry );
-
-    sendToInRangeSet( effectPacket, true );
+    auto actionData = exdData.get< Data::Action >( 8 );
+    assert( actionData );
+    action = World::Action::make_Action( getAsChara(), 8, 0, actionData );
   }
   else
   {
-    auto effectPacket = std::make_shared< Server::EffectPacket >( getId(), pTarget->getId(), 7 );
-    effectPacket->setRotation( Util::floatToUInt16Rot( getRot() ) );
-
-    Common::EffectEntry entry{};
-    entry.value = damage.first;
-    entry.effectType = Common::ActionEffectType::Damage;
-    entry.param0 = static_cast< uint8_t >( damage.second );
-    entry.param2 = 0x73;
-
-    effectPacket->addEffect( entry );
-
-    sendToInRangeSet( effectPacket, true );
-
+    auto actionData = exdData.get< Data::Action >( 7 );
+    assert( actionData );
+    action = World::Action::make_Action( getAsChara(), 7, 0, actionData );
   }
 
-  pTarget->takeDamage( damage.first );
+  action->setTargetId( pTarget->getId() );
+  action->setPos( getPos() );
+  action->setAutoAttack();
 
+  if( action->init() )
+  {
+    action->start();
+  }
 }
 
 
@@ -1785,6 +1814,7 @@ void Sapphire::Entity::Player::sendZonePackets()
   initZonePacket->data().zoneId = getCurrentTerritory()->getTerritoryTypeId();
   initZonePacket->data().weatherId = static_cast< uint8_t >( getCurrentTerritory()->getCurrentWeather() );
   initZonePacket->data().bitmask = 0x1;
+  initZonePacket->data().bitmask1 = 16;
   initZonePacket->data().festivalId = getCurrentTerritory()->getCurrentFestival().first;
   initZonePacket->data().additionalFestivalId = getCurrentTerritory()->getCurrentFestival().second;
   initZonePacket->data().pos.x = getPos().x;
@@ -2235,4 +2265,158 @@ bool Sapphire::Entity::Player::checkAction()
   }
 
   return true;
+}
+
+void Sapphire::Entity::Player::gaugeClear()
+{
+  std::memset( &m_gauge, 0, sizeof( m_gauge ) );
+}
+
+void Sapphire::Entity::Player::sendActorGauge()
+{
+  auto pPacket = makeZonePacket< FFXIVIpcActorGauge >( getId() );
+  pPacket->data().classJobId = static_cast< uint8_t >( getClass() );
+  std::memcpy( pPacket->data().data, &m_gauge, 15 );
+
+  queuePacket( pPacket );
+}
+
+void Sapphire::Entity::Player::gaugeSetRaw( uint8_t* pData )
+{
+  std::memcpy( &m_gauge, pData, 15 );
+  sendActorGauge();
+}
+
+void Sapphire::Entity::Player::gaugeWarSetIb( uint8_t value )
+{
+  assert( value >= 0 && value <= 100 );
+  auto oldValue = gaugeWarGetIb();
+  if( ( oldValue == 0 && value != 0 ) ||
+      ( oldValue != 0 && value == 0 ) )
+  {
+    auto pPacket = makeZonePacket< FFXIVIpcCharaVisualEffect >( getId() );
+    if( value != 0 )
+    {
+      pPacket->data().id = 7;
+    }
+    queuePacket( pPacket );
+  }
+  m_gauge.war.beastGauge = value;
+  if( oldValue != value )
+    sendActorGauge();
+}
+
+uint8_t Sapphire::Entity::Player::gaugeWarGetIb()
+{
+  return m_gauge.war.beastGauge;
+}
+
+void Sapphire::Entity::Player::gaugePldSetOath( uint8_t value )
+{
+  assert( value >= 0 && value <= 100 );
+  auto oldValue = gaugePldGetOath();
+  m_gauge.pld.oathGauge = value;
+  if( oldValue != value )
+    sendActorGauge();
+}
+
+uint8_t Sapphire::Entity::Player::gaugePldGetOath()
+{
+  return m_gauge.pld.oathGauge;
+}
+
+uint8_t Sapphire::Entity::Player::gaugeWhmGetLily()
+{
+  return m_gauge.whm.lilies;
+}
+
+uint8_t Sapphire::Entity::Player::gaugeWhmGetBloodLily()
+{
+  return m_gauge.whm.bloodLilies;
+}
+
+void Sapphire::Entity::Player::gaugeWhmSetLilies( uint8_t liles, uint8_t bloodLilies )
+{
+  assert( liles >= 0 && liles <= 3 );
+  assert( bloodLilies >= 0 && bloodLilies <= 3 );
+  m_gauge.whm.lilies = liles;
+  m_gauge.whm.bloodLilies = bloodLilies;
+  sendActorGauge();
+}
+
+void Sapphire::Entity::Player::gaugeWhmSetLilyTimer( uint16_t value, bool sendPacket )
+{
+  assert( value >= 0 && value <= 30000 );
+  m_gauge.whm.lilyTimer = value;
+  if( sendPacket )
+    sendActorGauge();
+}
+
+uint16_t Sapphire::Entity::Player::gaugeWhmGetLilyTimer()
+{
+  return m_gauge.whm.lilyTimer;
+}
+
+void Sapphire::Entity::Player::gaugeDrkSetBlood( uint8_t value )
+{
+  assert( value >= 0 && value <= 100 );
+  auto oldValue = gaugeDrkGetBlood();
+  m_gauge.drk.blood = value;
+  if( oldValue != value )
+    sendActorGauge();
+}
+
+uint8_t Sapphire::Entity::Player::gaugeDrkGetBlood()
+{
+  return m_gauge.drk.blood;
+}
+
+void Sapphire::Entity::Player::gaugeDrkSetDarkArts( bool value )
+{
+  auto oldValue = gaugeDrkGetDarkArts();
+  m_gauge.drk.darkArts = value ? 1 : 0;
+  if( oldValue != value )
+    sendActorGauge();
+}
+
+bool Sapphire::Entity::Player::gaugeDrkGetDarkArts()
+{
+  return m_gauge.drk.darkArts > 0;
+}
+
+void Sapphire::Entity::Player::gaugeDrkSetDarkSideTimer( uint16_t value, bool sendPacket )
+{
+  assert( value >= 0 && value <= 60000 );
+  auto oldValue = gaugeDrkGetDarkSideTimer();
+  m_gauge.drk.darksideTimer = value;
+  if( ( oldValue == 0 && value != 0 ) ||
+    ( oldValue != 0 && value == 0 ) )
+  {
+    auto pPacket = makeZonePacket< FFXIVIpcCharaVisualEffect >( getId() );
+    if( value != 0 )
+    {
+      pPacket->data().id = 22;
+    }
+    queuePacket( pPacket );
+  }
+  if( sendPacket )
+    sendActorGauge();
+}
+
+uint16_t Sapphire::Entity::Player::gaugeDrkGetDarkSideTimer()
+{
+  return m_gauge.drk.darksideTimer;
+}
+
+void Sapphire::Entity::Player::gaugeDrkSetShadowTimer( uint16_t value, bool sendPacket )
+{
+  assert( value >= 0 && value <= 60000 );
+  m_gauge.drk.shadowTimer = value;
+  if( sendPacket )
+    sendActorGauge();
+}
+
+uint16_t Sapphire::Entity::Player::gaugeDrkGetShadowTimer()
+{
+  return m_gauge.drk.shadowTimer;
 }

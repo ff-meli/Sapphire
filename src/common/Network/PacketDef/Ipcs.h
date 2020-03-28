@@ -61,7 +61,7 @@ namespace Sapphire::Network::Packets
 
     ///////////////////////////////////////////////////
 
-    ChatBanned = 0x006B,
+    ChatBanned = 0x0000,//0x006B,
     Playtime = 0x0284, // updated 5.21
     Logout = 0x02A8, // updated 5.21 hotfix
     CFNotify = 0x0241, // updated 5.21
@@ -80,7 +80,7 @@ namespace Sapphire::Network::Packets
 
     Chat = 0x012B, // updated 5.21 hotfix
 
-    WorldVisitList = 0x00FE, // added 4.5
+    WorldVisitList = 0x0000,//0x00FE, // added 4.5
 
     SocialList = 0x0172, // updated 5.21 hotfix
 
@@ -102,7 +102,7 @@ namespace Sapphire::Network::Packets
 
     LinkshellList = 0x0395, // updated 5.21 hotfix
 
-    MailDeleteRequest = 0x012B, // updated 5.0
+    MailDeleteRequest = 0x0000,//0x012B, // updated 5.0
 
     // 12D - 137 - constant gap between 4.5x -> 5.0
     ReqMoogleMailList = 0x0138, // updated 5.0
@@ -118,7 +118,7 @@ namespace Sapphire::Network::Packets
 
     CharaFreeCompanyTag = 0x013B, // updated 4.5
     FreeCompanyBoardMsg = 0x013C, // updated 4.5
-    FreeCompanyInfo = 0x013D, // updated 4.5
+    FreeCompanyInfo = 0x0000,//0x013D, // updated 4.5
     ExamineFreeCompanyInfo = 0x013E, // updated 4.5
 
     FreeCompanyUpdateShortMessage = 0x0157, // added 5.0
@@ -133,7 +133,7 @@ namespace Sapphire::Network::Packets
     AoeEffect32 = 0x0376, // updated 5.21 hotfix
     PersistantEffect = 0x0110, // updated 5.21 hotfix
 
-    GCAffiliation = 0x016F, // updated 5.0
+    GCAffiliation = 0x0000,//0x016F, // updated 5.0
 
     PlayerSpawn = 0x033D, // updated 5.21 hotfix
     NpcSpawn = 0x00B3, // updated 5.21 hotfix
@@ -213,11 +213,11 @@ namespace Sapphire::Network::Packets
     SomeDirectorUnk4 = 0x01F3, // updated 5.21 hotfix
     SomeDirectorUnk8 = 0x028A, // updated 5.18
     SomeDirectorUnk16 = 0x028C, // updated 5.18
-    DirectorPopUp = 0x0162, // updated 5.18 - display dialogue pop-ups in duties and FATEs, for example, Teraflare's countdown
+    DirectorPopUp = 0x0000,//0x0162, // updated 5.18 - display dialogue pop-ups in duties and FATEs, for example, Teraflare's countdown
     DirectorPopUp4 = 0x0214, // updated 5.18
     DirectorPopUp8 = 0x00F8, // updated 5.18
 
-    CFAvailableContents = 0xF1FD, // updated 4.2
+    CFAvailableContents = 0x0000,//0xF1FD, // updated 4.2
 
     WeatherChange = 0x032A, // updated 5.21 hotfix
     PlayerTitleList = 0x037D, // updated 5.1
